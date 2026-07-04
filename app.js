@@ -1,20 +1,13 @@
+require('dotenv').config();
 const express=require("express");
 const cookieParser=require('cookie-parser');
 const jwt=require('jsonwebtoken');
 const bcrypt=require('bcrypt');
 const path=require('path');
 
-
-
-
-
-const ownerRouter=require('./routes/ownerRouter');
-const userRouter=require('./routes/userRouter');
-const productRouter=require('./routes/productRouter');
-const db=require('./config/mongoose-connection');
-
-
 const app=express();
+
+
 
 app.set('view engine', 'ejs');
 app.use(express.json());
@@ -22,8 +15,19 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-//Router    
 
+const indexRouter = require('./routes/index');
+const ownerRouter=require('./routes/ownerRouter');
+const userRouter=require('./routes/userRouter');
+const productRouter=require('./routes/productRouter');
+
+const db=require('./config/mongoose-connection');
+
+
+
+
+//Router    
+app.use('/', indexRouter);
 app.use('/owner',ownerRouter);
 app.use('/product',productRouter);
 app.use('/user',userRouter);
@@ -35,9 +39,7 @@ app.use('/user',userRouter);
 
 
 
-app.get('/',(req,res)=>{
-res.render("index");
-})
+
 
 
 //HOME
@@ -47,7 +49,7 @@ res.render("index");
 
 
 
-
+console.log(process.env.NODE_ENV);
 
 
 

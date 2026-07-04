@@ -10,7 +10,7 @@ const ownerSchema=mongoose.Schema(
         contact:Number,
         picture:String,
         gstin:String
-    }
+    } 
 )
 
 module.exports=mongoose.model('owener',ownerSchema); 
