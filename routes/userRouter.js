@@ -8,7 +8,7 @@ const jwt=require('jsonwebtoken');
 const bcrypt=require('bcrypt');
 const path=require('path');
 
-const {registerUser,loginUser}=require('../controllers/authController')
+const {registerUser,loginUser,logOutUser}=require('../controllers/authController')
 
 
 router.get('/',(req,res)=>{
@@ -25,6 +25,7 @@ router.post('/register',registerUser);
 router.post('/login',loginUser);   
 //login
 
+router.post('/logout',logOutUser);
 
 
 

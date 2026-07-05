@@ -1,4 +1,4 @@
-const mongoose=reuire('mongoose');
+const mongoose=require('mongoose');
 
 const productSchema=mongoose.Schema({
 image:String,

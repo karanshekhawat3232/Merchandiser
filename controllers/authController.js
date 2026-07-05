@@ -36,7 +36,7 @@ module.exports.loginUser = async (req, res) => {
         let user = await userModel.findOne({ email });
         if (!user) return res.send("Wrong email or password");
 
-        bcrypt.compare(password, user.password, (err, result) => {
+            bcrypt.compare(password, user.password, (err, result) => {
             if (err) {
                 console.error(err.message);
                 return res.status(500).send("Server Error");
@@ -45,11 +45,17 @@ module.exports.loginUser = async (req, res) => {
 
             let token = genrateToken(user);
             res.cookie("token", token);
-            return res.send("HIHIIHI");
+              return res.redirect('/shop');
         });
 
     } catch (err) {
         console.error(err.message);
         return res.status(500).send("Server Error");
     }
+};
+
+module.exports.logOutUser=async(req,res)=>{
+
+    res.cookie("token","");
+    res.redirect('/');
 };
