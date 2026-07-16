@@ -1,35 +1,9 @@
-const express=require('express');
-const userModel = require('../models/user-model');
-const router=express.Router();
+const express = require('express');
+const router = express.Router();
+const { registerUser, loginUser, logOutUser } = require('../controllers/authController');
 
+router.post('/register', registerUser);
+router.post('/login', loginUser);
+router.get('/logout', logOutUser);
 
-const cookieParser=require('cookie-parser');
-const jwt=require('jsonwebtoken');
-const bcrypt=require('bcrypt');
-const path=require('path');
-
-const {registerUser,loginUser,logOutUser}=require('../controllers/authController')
-
-
-router.get('/',(req,res)=>{
-res.send("HIIII");
-})
-
-
-
-//register
-router.post('/register',registerUser);    
-//register
-
-//login
-router.post('/login',loginUser);   
-//login
-
-router.post('/logout',logOutUser);
-
-
-
-
-
-
-module.exports=router;
+module.exports = router;

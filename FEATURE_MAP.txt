@@ -1,0 +1,159 @@
+==============================================================
+ MERCHANDISER APP — FEATURE MAP
+ Full list of every feature added, what it does, and where
+==============================================================
+
+--------------------------------------------------------------
+FILE: models/user-model.js
+--------------------------------------------------------------
+
+[ADDED] purchaseHistory array field
+  - Each entry is a subdocument with:
+      • orderId     — auto-generated UUID via crypto.randomUUID()
+      • orderDate   — Date, default Date.now
+      • items       — array of { name, price, image }
+                      image is a base64 data URI string ("data:image/jpeg;base64,...")
+      • totalAmount — Number, the charged total after all calculations
+  - Uses _id: false on sub-schemas (no extra Mongo IDs on subdocs)
+  - All existing fields (Name, email, password, cart, orders, contact, picture) preserved unchanged
+
+--------------------------------------------------------------
+FILE: models/product-model.js
+--------------------------------------------------------------
+
+[ADDED] textcolor field (String)
+  - Was already referenced in existing cart.ejs and shop.ejs templates
+    but was missing from the schema — added for correctness
+[ADDED] category field (String)
+  - For future filtering/grouping of products by category
+  - All existing fields (image as Buffer, name, price, discount, bgcolor, panelcolor) preserved
+
+--------------------------------------------------------------
+FILE: routes/index.js  (mounted at "/" in app.js)
+--------------------------------------------------------------
+
+[MODIFIED] GET /addtocart/:productid  — protected by isLoggedin
+  - Full try/catch wrapping every async operation
+  - Validates product exists BEFORE pushing — flashes "Product not found" + redirects /shop if missing
+  - Finds user by req.user.email, pushes productid onto user.cart, saves
+  - On success: req.flash("success", "Item added to cart") + redirect /shop
+  - On any error: req.flash("error", "Could not add item to cart") + redirect /shop
+
+[MODIFIED] GET /cart  — protected by isLoggedin
+  - Full try/catch
+  - Fetches user + .populate("cart") in a single query
+  - Guards against null user (flashes error, redirects)
+  - Empty cart guard: if cart.length === 0, renders cart.ejs with bill = { totalMRP:0, totalDiscount:0, platformFee:20, totalAmount:20 } — no division/reduce on empty arrays
+  - Grouping logic: iterates populated cart items, groups by _id.toString() to count duplicate ObjectId entries as quantity
+  - Bill computation:
+      • totalMRP      = sum(price * quantity) per grouped product
+      • totalDiscount = sum(discount * quantity) per grouped product  [discount is a flat ₹ amount]
+      • platformFee   = 20 (fixed constant)
+      • totalAmount   = totalMRP - totalDiscount + platformFee
+  - Passes bill = { totalMRP, totalDiscount, platformFee, totalAmount } object to view (not a scalar)
+
+[NEW] GET /account  — protected by isLoggedin
+  - Full try/catch
+  - Fetches full user document by req.user.email (purchaseHistory is embedded, no populate needed)
+  - Sorts purchaseHistory descending by orderDate server-side using .slice().sort() — does NOT mutate the original array with .reverse()
+  - Renders account.ejs with { user, purchaseHistory: sortedHistory }
+
+--------------------------------------------------------------
+FILE: views/shop.ejs
+--------------------------------------------------------------
+
+[MODIFIED] Flash banner block
+  - Fixed-position banners at top-center of viewport (z-50)
+  - Green banner if success[0] exists, red banner if error[0] exists
+  - Each banner auto-dismisses after 3 seconds via setTimeout + opacity fade + translateY animation
+
+[MODIFIED] Product grid layout
+  - Changed from flex row to: grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6
+  - Responsive at all breakpoints
+
+[MODIFIED] Product card
+  - Each card is a relative container with overflow-hidden and hover:shadow-xl
+  - Add-to-cart button: absolute top-3 right-3, h-10 w-10 rounded-full, bg-white shadow-lg
+    → contains <i class="ri-add-line"> icon
+    → is an <a href="/addtocart/<%= product._id %>">
+  - Product image: data:image/jpeg;base64 from Buffer.toString('base64')
+  - Discount badge: shown conditionally when product.discount > 0
+
+--------------------------------------------------------------
+FILE: views/cart.ejs
+--------------------------------------------------------------
+
+[MODIFIED] Bill display
+  - All bill values now read from the bill object passed by the route:
+      <%= bill.totalMRP %>, <%= bill.totalDiscount %>, <%= bill.platformFee %>, <%= bill.totalAmount %>
+  - No inline JS calculations inside the template
+  - Removed the entire old commented-out code block
+
+[ADDED] Flash banners — same pattern as shop.ejs
+
+[ADDED] Empty cart state
+  - Shows an icon, "Your cart is empty" message, and Browse Products link
+  - No forEach or base64 access attempted on an empty array
+
+--------------------------------------------------------------
+FILE: views/account.ejs  (NEW FILE)
+--------------------------------------------------------------
+
+[NEW] Two-column responsive layout
+  Column 1 — Sticky Sidebar Profile (lg:w-1/3):
+    • Circular avatar showing user's initials
+        → computed as: user.Name.split(' ').map(n => n[0]).join('').toUpperCase()
+    • Gradient background (blue-500 → indigo-600)
+    • Displays: full name, email, order count, mongo _id in monospace code tag
+    • Navigation buttons: Back to Shop (/shop), Logout (/user/logout)
+
+  Column 2 — Purchase History (lg:w-2/3):
+    • Reads from the `purchaseHistory` variable (pre-sorted by route)
+    • Empty state: archive icon + "No orders yet" + link to /shop
+    • Order card per purchase entry:
+        – orderId in monospace (ri-receipt-line icon)
+        – Date formatted: toLocaleDateString('en-IN', { year, month:'long', day:'numeric' })
+        – Line-item thumbnails: <img src="<%= lineItem.image %>"> (base64 data URI stored at order time)
+        – onerror fallback on each img to prevent broken image icons
+        – Bold green totalAmount badge: bg-green-100 text-green-700 font-semibold px-4 py-2 rounded-full
+
+--------------------------------------------------------------
+FILE: views/partials/header.ejs
+--------------------------------------------------------------
+
+[FIXED] "My Account" nav link
+  - Was: <a href="">My Account</a>   (dead link)
+  - Now: <a href="/account">My Account</a>
+
+--------------------------------------------------------------
+FILE: app.js  — NO CHANGES REQUIRED
+--------------------------------------------------------------
+
+Already has:
+  • express-session configured (resave:false, saveUninitialized:false, secret from .env)
+  • connect-flash mounted
+  • Global res.locals.success / res.locals.error middleware
+  • app.set('view engine','ejs')
+  • All routers mounted correctly, including '/' → index.js which owns /shop, /cart, /account
+
+--------------------------------------------------------------
+ROUTING SUMMARY (how URLs map to files)
+--------------------------------------------------------------
+
+  GET /             → routes/index.js → views/index.ejs
+  GET /shop         → routes/index.js (isLoggedin) → views/shop.ejs
+  GET /addtocart/:id→ routes/index.js (isLoggedin) → redirect /shop
+  GET /cart         → routes/index.js (isLoggedin) → views/cart.ejs
+  GET /account      → routes/index.js (isLoggedin) → views/account.ejs
+
+  POST /user/register → routes/userRouter.js → controllers/authController.js
+  POST /user/login    → routes/userRouter.js → controllers/authController.js
+  GET  /user/logout   → routes/userRouter.js → controllers/authController.js
+
+  Middleware:  middelwares/isLoggedin.js
+               → reads JWT from cookie → verifies → sets req.user → calls next()
+               → on failure: req.flash("error","You Need To Login First") + redirect /
+
+--------------------------------------------------------------
+END OF FEATURE MAP
+==============================================================

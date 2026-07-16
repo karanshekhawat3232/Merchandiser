@@ -1,12 +1,19 @@
 <%- include('./partials/header') %>
 
-    <% if (locals.error && error.length > 0) { %>
-        <div class="absolute top-5 left-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-md bg-red-500">
-            <span class="inline-block mt-1 mb-1 text-white">
-                <%= error %>
-            </span>
+    <% if (locals.success && success.length > 0) { %>
+        <div id="flash-success" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl border border-green-400">
+            <i class="ri-checkbox-circle-line text-xl"></i>
+            <span class="font-medium"><%= success[0] %></span>
         </div>
-        <% } %>
+        <script>setTimeout(function(){var e=document.getElementById('flash-success');if(e){e.style.transition='opacity 0.4s';e.style.opacity='0';setTimeout(function(){e.remove()},400)}},3000);</script>
+    <% } %>
+    <% if (locals.error && error.length > 0) { %>
+        <div id="flash-error" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-red-500 text-white px-6 py-3 rounded-xl shadow-2xl border border-red-400">
+            <i class="ri-error-warning-line text-xl"></i>
+            <span class="font-medium"><%= error[0] %></span>
+        </div>
+        <script>setTimeout(function(){var e=document.getElementById('flash-error');if(e){e.style.transition='opacity 0.4s';e.style.opacity='0';setTimeout(function(){e.remove()},400)}},3000);</script>
+    <% } %>
             <div class="w-full h-screen flex px-20">
                 <div class="w-1/2 flex items-center justify-center h-screen">
                     <div class="w-full px-32">
